@@ -2,11 +2,17 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_FILTER } from '@nestjs/core';
+import { LoggerModule } from 'nestjs-pino';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import configuration from './config/configuration';
+import { validationSchema } from './config/joi.config';
+import { RedisModule } from './redis/redis.module';
+import { QueuesModule } from './queues/queues.module';
+import { HealthModule } from './health/health.module';
 import { LinkModule } from './link/link.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
+import { AdminModule } from './admin/admin.module';
 import { Link } from './link/entities/link.entity';
 import { Click } from './analytics/entities/click.entity';
 import { ApiKey } from './auth/entities/api-key.entity';
@@ -16,6 +22,15 @@ import { ApiKey } from './auth/entities/api-key.entity';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+      validationSchema,
+      validationOptions: { abortEarly: true },
+    }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        autoLogging: true,
+        transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
+        level: process.env.LOG_LEVEL || 'info',
+      },
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -32,9 +47,13 @@ import { ApiKey } from './auth/entities/api-key.entity';
         logging: configService.get<string>('app.nodeEnv') === 'development',
       }),
     }),
+    RedisModule,
+    QueuesModule,
+    HealthModule,
     LinkModule,
     AnalyticsModule,
     AuthModule,
+    AdminModule,
   ],
   providers: [
     {

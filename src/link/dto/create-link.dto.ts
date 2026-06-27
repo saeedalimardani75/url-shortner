@@ -8,14 +8,14 @@ export class CreateLinkDto {
 
   @ApiPropertyOptional({
     example: 'custom123',
-    description: 'Optional custom short code (will be generated if omitted)',
+    description: 'Optional custom short code (generated if omitted)',
   })
   @IsOptional()
   @IsString()
   customCode?: string;
 
   @ApiPropertyOptional({
-    example: '2025-12-31T23:59:59.000Z',
+    example: '2027-12-31T23:59:59.000Z',
     description: 'Optional expiration date',
   })
   @IsOptional()

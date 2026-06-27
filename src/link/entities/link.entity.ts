@@ -1,11 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
 import { Click } from '../../analytics/entities/click.entity';
 
 @Entity('links')
@@ -14,19 +7,23 @@ export class Link {
   id: number;
 
   @Column({ unique: true })
+  @Index()
   shortCode: string;
 
   @Column()
   originalUrl: string;
 
   @Column({ nullable: true })
-  expiresAt: Date;
+  expiresAt?: Date;
 
   @Column({ default: 0 })
   clickCount: number;
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ nullable: true })
+  deletedAt?: Date;
 
   @CreateDateColumn()
   createdAt: Date;

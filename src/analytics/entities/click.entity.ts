@@ -1,11 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Link } from '../../link/entities/link.entity';
 
 @Entity('clicks')
@@ -14,6 +7,7 @@ export class Click {
   id: number;
 
   @Column()
+  @Index()
   linkId: number;
 
   @ManyToOne(() => Link, (link) => link.clicks, { onDelete: 'CASCADE' })
@@ -24,6 +18,7 @@ export class Click {
   ip: string;
 
   @Column({ nullable: true })
+  @Index()
   userAgent: string;
 
   @Column({ nullable: true })
@@ -32,6 +27,13 @@ export class Click {
   @Column({ nullable: true })
   country: string;
 
+  @Column({ nullable: true })
+  browser: string;
+
+  @Column({ nullable: true })
+  os: string;
+
   @CreateDateColumn()
+  @Index()
   clickedAt: Date;
 }

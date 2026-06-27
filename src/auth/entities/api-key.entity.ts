@@ -1,10 +1,10 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+
+export enum ApiKeyRole {
+  ADMIN = 'admin',
+  READONLY = 'readonly',
+  ANALYTICS = 'analytics',
+}
 
 @Entity('api_keys')
 export class ApiKey {
@@ -12,16 +12,26 @@ export class ApiKey {
   id: number;
 
   @Column({ unique: true })
-  key: string;
+  @Index()
+  keyHash: string;
 
-  @Column()
+  @Column({ unique: true })
   name: string;
 
-  @Column({ default: 'user' })
+  @Column({ type: 'varchar', default: ApiKeyRole.ADMIN })
   role: string;
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ nullable: true })
+  expiresAt?: Date;
+
+  @Column({ nullable: true })
+  lastUsedAt?: Date;
+
+  @Column({ nullable: true })
+  rotatedFromId?: number;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -9,5 +9,6 @@ import { AnalyticsModule } from '../analytics/analytics.module';
   imports: [TypeOrmModule.forFeature([Link]), AnalyticsModule],
   controllers: [LinkController],
   providers: [LinkService],
+  exports: [LinkService],
 })
 export class LinkModule {}
