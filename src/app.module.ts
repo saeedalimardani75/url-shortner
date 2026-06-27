@@ -1,0 +1,46 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_FILTER } from '@nestjs/core';
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import configuration from './config/configuration';
+import { LinkModule } from './link/link.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AuthModule } from './auth/auth.module';
+import { Link } from './link/entities/link.entity';
+import { Click } from './analytics/entities/click.entity';
+import { ApiKey } from './auth/entities/api-key.entity';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [configuration],
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('app.database.host'),
+        port: configService.get<number>('app.database.port'),
+        username: configService.get<string>('app.database.username'),
+        password: configService.get<string>('app.database.password'),
+        database: configService.get<string>('app.database.name'),
+        entities: [Link, Click, ApiKey],
+        synchronize: configService.get<string>('app.nodeEnv') !== 'production',
+        logging: configService.get<string>('app.nodeEnv') === 'development',
+      }),
+    }),
+    LinkModule,
+    AnalyticsModule,
+    AuthModule,
+  ],
+  providers: [
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
+    },
+  ],
+})
+export class AppModule {}
