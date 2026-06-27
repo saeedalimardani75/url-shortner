@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { ConflictException, NotFoundException, GoneException, BadRequestException } from '@nestjs/common';
 import { LinkService } from '../link.service';
 import { Link } from '../entities/link.entity';
@@ -26,8 +27,21 @@ describe('LinkService', () => {
   let linkRepository: any;
   let redisService: any;
   let mockQueues: any;
+  let mockQueryRunner: any;
 
   beforeEach(async () => {
+    mockQueryRunner = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      startTransaction: jest.fn().mockResolvedValue(undefined),
+      commitTransaction: jest.fn().mockResolvedValue(undefined),
+      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+      manager: {
+        create: jest.fn().mockImplementation((_entity, data) => createMockLink(data)),
+        save: jest.fn().mockImplementation((link) => Promise.resolve({ ...createMockLink(), ...link, id: 1 })),
+      },
+    };
+
     linkRepository = {
       create: jest.fn().mockImplementation((data) => createMockLink(data)),
       save: jest.fn().mockImplementation((link) => Promise.resolve(link)),
@@ -37,12 +51,14 @@ describe('LinkService', () => {
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
       remove: jest.fn().mockImplementation((link) => Promise.resolve(link)),
       count: jest.fn().mockResolvedValue(1),
+      increment: jest.fn().mockResolvedValue(undefined),
     };
 
     redisService = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue(undefined),
       del: jest.fn().mockResolvedValue(undefined),
+      getOrSet: jest.fn().mockImplementation(async (_key, factory) => factory()),
     };
 
     mockQueues = {
@@ -62,6 +78,12 @@ describe('LinkService', () => {
         },
         { provide: RedisService, useValue: redisService },
         { provide: QueuesService, useValue: mockQueues },
+        {
+          provide: DataSource,
+          useValue: {
+            createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
+          },
+        },
       ],
     }).compile();
 
@@ -78,8 +100,9 @@ describe('LinkService', () => {
       const result = await service.create(dto);
       expect(result).toBeDefined();
       expect(result.shortCode).toBeDefined();
-      expect(linkRepository.create).toHaveBeenCalled();
-      expect(linkRepository.save).toHaveBeenCalled();
+      expect(mockQueryRunner.manager.create).toHaveBeenCalled();
+      expect(mockQueryRunner.manager.save).toHaveBeenCalled();
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
       expect(redisService.set).toHaveBeenCalled();
     });
 
@@ -93,6 +116,19 @@ describe('LinkService', () => {
       const dto = { originalUrl: 'https://example.com', customCode: 'admin' };
       await expect(service.create(dto)).rejects.toThrow(BadRequestException);
     });
+
+    it('should retry on short code collision during auto-generation', async () => {
+      mockQueryRunner.manager.save
+        .mockRejectedValueOnce({ code: '23505' })
+        .mockImplementationOnce((link: Partial<Link>) =>
+          Promise.resolve({ ...createMockLink(), ...link, id: 1 }),
+        );
+
+      const dto = { originalUrl: 'https://example.com' };
+      const result = await service.create(dto);
+      expect(result).toBeDefined();
+      expect(mockQueryRunner.manager.save).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('findByShortCode', () => {
@@ -100,6 +136,7 @@ describe('LinkService', () => {
       const result = await service.findByShortCode('abc123');
       expect(result).toBeDefined();
       expect(result.shortCode).toBe('abc123');
+      expect(redisService.getOrSet).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if link not found', async () => {
@@ -117,15 +154,36 @@ describe('LinkService', () => {
       const result = await service.findByShortCode('abc123');
       expect(result).toBeDefined();
       expect(linkRepository.findOne).not.toHaveBeenCalled();
+      expect(redisService.getOrSet).not.toHaveBeenCalled();
     });
   });
 
   describe('resolveAndTrack', () => {
     it('should resolve and track a click', async () => {
+      linkRepository.findOne
+        .mockResolvedValueOnce(createMockLink())
+        .mockResolvedValueOnce(createMockLink({ clickCount: 1 }));
+
       const result = await service.resolveAndTrack('abc123', '127.0.0.1', 'test-agent', 'https://referrer.com');
       expect(result.clickCount).toBe(1);
-      expect(mockQueues.addClickEvent).toHaveBeenCalled();
+      expect(mockQueues.addClickEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ip: expect.stringMatching(/^[a-f0-9]{16}$/),
+        }),
+      );
+      expect(linkRepository.increment).toHaveBeenCalledWith({ id: 1 }, 'clickCount', 1);
       expect(redisService.set).toHaveBeenCalled();
+    });
+
+    it('should still redirect when analytics enqueue fails', async () => {
+      mockQueues.addClickEvent.mockRejectedValueOnce(new Error('queue unavailable'));
+      linkRepository.findOne
+        .mockResolvedValueOnce(createMockLink())
+        .mockResolvedValueOnce(createMockLink({ clickCount: 1 }));
+
+      const result = await service.resolveAndTrack('abc123');
+      expect(result.clickCount).toBe(1);
+      expect(linkRepository.increment).toHaveBeenCalled();
     });
   });
 

@@ -1,11 +1,6 @@
 import { IsString, IsOptional, IsEnum, IsDateString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export enum ApiKeyRole {
-  ADMIN = 'admin',
-  READONLY = 'readonly',
-  ANALYTICS = 'analytics',
-}
+import { ApiKeyRole } from '../entities/api-key.entity';
 
 export class CreateApiKeyDto {
   @ApiProperty({ example: 'My App Key' })

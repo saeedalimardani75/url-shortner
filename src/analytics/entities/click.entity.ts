@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, Jo
 import { Link } from '../../link/entities/link.entity';
 
 @Entity('clicks')
+@Index(['linkId', 'clickedAt'])
 export class Click {
   @PrimaryGeneratedColumn()
   id: number;
@@ -14,7 +15,7 @@ export class Click {
   @JoinColumn({ name: 'linkId' })
   link: Link;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 64 })
   ip: string;
 
   @Column({ nullable: true })

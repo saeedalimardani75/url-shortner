@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { BadRequestException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { AnalyticsService } from '../analytics.service';
 import { Click } from '../entities/click.entity';
 import { RedisService } from '../../redis/redis.service';
+import { RedisKeys } from '../../redis/redis-keys';
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
@@ -14,7 +16,7 @@ describe('AnalyticsService', () => {
     {
       id: 1,
       linkId: 1,
-      ip: '127.0.0.1',
+      ip: 'a1b2c3d4e5f67890',
       userAgent: 'Chrome',
       referrer: 'https://x.com',
       country: 'US',
@@ -49,6 +51,8 @@ describe('AnalyticsService', () => {
     get: jest.fn().mockResolvedValue(null),
     set: jest.fn().mockResolvedValue(undefined),
     del: jest.fn().mockResolvedValue(undefined),
+    delPattern: jest.fn().mockResolvedValue(undefined),
+    getOrSet: jest.fn().mockImplementation(async (_key, factory) => factory()),
   };
 
   beforeEach(async () => {
@@ -65,6 +69,7 @@ describe('AnalyticsService', () => {
     redisService = module.get(RedisService);
 
     jest.clearAllMocks();
+    mockQueryBuilder.clone.mockReturnValue(mockQueryBuilder);
   });
 
   it('should be defined', () => {
@@ -90,13 +95,7 @@ describe('AnalyticsService', () => {
 
   describe('getAggregatedAnalytics', () => {
     it('should return aggregated analytics', async () => {
-      mockQueryBuilder.getRawMany
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([]);
+      mockQueryBuilder.getRawMany.mockResolvedValue([]);
 
       const result = await service.getAggregatedAnalytics(1);
       expect(result).toHaveProperty('totalClicks');
@@ -107,6 +106,7 @@ describe('AnalyticsService', () => {
       expect(result).toHaveProperty('topBrowsers');
       expect(result).toHaveProperty('topOs');
       expect(result).toHaveProperty('topReferrers');
+      expect(redisService.getOrSet).toHaveBeenCalled();
     });
 
     it('should return cached results on subsequent calls', async () => {
@@ -125,6 +125,38 @@ describe('AnalyticsService', () => {
       const result = await service.getAggregatedAnalytics(1);
       expect(result).toEqual(cachedResult);
       expect(clickRepository.createQueryBuilder).not.toHaveBeenCalled();
+      expect(redisService.getOrSet).not.toHaveBeenCalled();
+    });
+
+    it('should use andWhere for top dimension queries to preserve linkId filter', async () => {
+      mockQueryBuilder.getRawMany.mockResolvedValue([]);
+
+      await service.getAggregatedAnalytics(1);
+
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('click.country IS NOT NULL');
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('click.browser IS NOT NULL');
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('click.os IS NOT NULL');
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('click.referrer IS NOT NULL');
+    });
+
+    it('should reject partial date ranges', async () => {
+      await expect(service.getAggregatedAnalytics(1, '2026-01-01')).rejects.toThrow(BadRequestException);
+      await expect(service.getAggregatedAnalytics(1, undefined, '2026-12-31')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should reject inverted date ranges', async () => {
+      await expect(
+        service.getAggregatedAnalytics(1, '2026-12-31', '2026-01-01'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('invalidateCache', () => {
+    it('should delete analytics cache keys for a link', async () => {
+      await service.invalidateCache(1);
+      expect(redisService.delPattern).toHaveBeenCalledWith(RedisKeys.analyticsPattern(1));
     });
   });
 });

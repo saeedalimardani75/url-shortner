@@ -5,6 +5,7 @@ export default registerAs('app', () => ({
   nodeEnv: process.env.NODE_ENV || 'development',
   logLevel: process.env.LOG_LEVEL || 'info',
   baseUrl: process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`,
+  redirectStatus: parseInt(process.env.REDIRECT_STATUS || '301', 10),
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432', 10),
