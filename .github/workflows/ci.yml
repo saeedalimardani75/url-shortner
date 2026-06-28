@@ -2,35 +2,40 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "22"
 
 jobs:
   lint:
     name: Lint & TypeCheck
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: url-shortener/package-lock.json
-      - working-directory: url-shortener
-        run: npm ci
-      - working-directory: url-shortener
-        run: npm run lint
-      - working-directory: url-shortener
-        run: npx tsc --noEmit
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npx tsc --noEmit
 
   test:
     name: Test
     needs: lint
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -38,60 +43,67 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: urlshortener_test
+        ports:
+          - 5432:5432
         options: >-
-          --health-cmd pg_isready -U postgres
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 5432:5432
+
       redis:
         image: redis:7-alpine
+        ports:
+          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 6379:6379
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: url-shortener/package-lock.json
-      - working-directory: url-shortener
-        run: npm ci
-      - working-directory: url-shortener
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run tests
         env:
           DB_HOST: localhost
           DB_PORT: 5432
           DB_USERNAME: postgres
           DB_PASSWORD: postgres
           DB_NAME: urlshortener_test
+
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-          REDIS_PASSWORD: ''
+          REDIS_PASSWORD: ""
           REDIS_DB: 0
+
           NODE_ENV: test
+
         run: npm test
 
   build:
     name: Build & Docker
     needs: test
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: url-shortener/package-lock.json
-      - working-directory: url-shortener
-        run: npm ci
-      - working-directory: url-shortener
-        run: npm run build
-      - working-directory: url-shortener
-        name: Build Docker image
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Build Docker image
         run: docker build -t url-shortener .
