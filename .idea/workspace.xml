@@ -1,46 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3fadb51f-19ce-4d21-a50c-3c1500e1c04a" name="Changes" comment="feat: some bugs fixed in analytics and auth and link service and controllers">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/admin/admin.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/admin/admin.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/analytics/__tests__/analytics.service.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/analytics/__tests__/analytics.service.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/analytics/analytics.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/analytics/analytics.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/analytics/analytics.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/analytics/analytics.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/analytics/entities/click.entity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/analytics/entities/click.entity.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/auth/__tests__/auth.service.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/auth/__tests__/auth.service.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/auth/__tests__/roles.guard.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/auth/__tests__/roles.guard.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/auth/auth.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/auth/auth.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/auth/dto/create-api-key.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/auth/dto/create-api-key.dto.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/auth/entities/api-key.entity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/auth/entities/api-key.entity.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/auth/guards/api-key.guard.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/auth/guards/api-key.guard.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/auth/guards/roles.guard.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/auth/guards/roles.guard.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/common/__tests__/throttle.guard.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/__tests__/throttle.guard.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/common/guards/throttle.guard.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/common/guards/throttle.guard.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/config/configuration.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/config/configuration.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/config/joi.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/config/joi.config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/health/__tests__/health.controller.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/health/__tests__/health.controller.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/health/health.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/health/health.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/link/__tests__/link.service.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/link/__tests__/link.service.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/link/dto/create-link.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/link/dto/create-link.dto.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/link/dto/link-response.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/link/dto/link-response.dto.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/link/entities/link.entity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/link/entities/link.entity.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/link/link.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/link/link.config.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/link/link.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/link/link.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/queues/analytics.processor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/queues/analytics.processor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/queues/cleanup.processor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/queues/cleanup.processor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/queues/queues.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/queues/queues.service.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/redis/__tests__/redis.service.spec.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/redis/__tests__/redis.service.spec.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/redis/redis-keys.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/redis/redis-keys.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/redis/redis.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/redis/redis.service.ts" afterDir="false" />
-    </list>
+    <list default="true" id="3fadb51f-19ce-4d21-a50c-3c1500e1c04a" name="Changes" comment="feat: production hardening, role split, bootstrap seeder, and test expansion&#10;&#10;- Fix floating promises, throttle guard leak, URL varchar→text, duplicate logs&#10;- Add Helmet, .env.example, composite indexes, pagination, seeder&#10;- Split admin/customer roles; admin manages keys, customer manages links&#10;- 5 new test files (48 tests); rewrite Redis tests with ioredis mock&#10;- Replace process.env with ConfigService; add customCode validation&#10;- Update README, .gitignore, lint/prettier cleanup" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -105,7 +66,7 @@
       <workItem from="1782565178263" duration="2579000" />
       <workItem from="1782570785880" duration="238000" />
       <workItem from="1782571037348" duration="2079000" />
-      <workItem from="1782651220017" duration="1193000" />
+      <workItem from="1782651220017" duration="1509000" />
     </task>
     <task id="LOCAL-00001" summary="feat: progressing in making project product ready">
       <option name="closed" value="true" />
@@ -123,7 +84,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782571359597</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="feat: production hardening, role split, bootstrap seeder, and test expansion&#10;&#10;- Fix floating promises, throttle guard leak, URL varchar→text, duplicate logs&#10;- Add Helmet, .env.example, composite indexes, pagination, seeder&#10;- Split admin/customer roles; admin manages keys, customer manages links&#10;- 5 new test files (48 tests); rewrite Redis tests with ioredis mock&#10;- Replace process.env with ConfigService; add customCode validation&#10;- Update README, .gitignore, lint/prettier cleanup">
+      <option name="closed" value="true" />
+      <created>1782656359379</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1782656359380</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -134,7 +103,8 @@
     <option name="CHECK_NEW_TODO" value="false" />
     <MESSAGE value="feat: progressing in making project product ready" />
     <MESSAGE value="feat: some bugs fixed in analytics and auth and link service and controllers" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: some bugs fixed in analytics and auth and link service and controllers" />
+    <MESSAGE value="feat: production hardening, role split, bootstrap seeder, and test expansion&#10;&#10;- Fix floating promises, throttle guard leak, URL varchar→text, duplicate logs&#10;- Add Helmet, .env.example, composite indexes, pagination, seeder&#10;- Split admin/customer roles; admin manages keys, customer manages links&#10;- 5 new test files (48 tests); rewrite Redis tests with ioredis mock&#10;- Replace process.env with ConfigService; add customCode validation&#10;- Update README, .gitignore, lint/prettier cleanup" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: production hardening, role split, bootstrap seeder, and test expansion&#10;&#10;- Fix floating promises, throttle guard leak, URL varchar→text, duplicate logs&#10;- Add Helmet, .env.example, composite indexes, pagination, seeder&#10;- Split admin/customer roles; admin manages keys, customer manages links&#10;- 5 new test files (48 tests); rewrite Redis tests with ioredis mock&#10;- Replace process.env with ConfigService; add customCode validation&#10;- Update README, .gitignore, lint/prettier cleanup" />
     <option name="NON_MODAL_COMMIT_POSTPONE_SLOW_CHECKS" value="false" />
   </component>
 </project>
