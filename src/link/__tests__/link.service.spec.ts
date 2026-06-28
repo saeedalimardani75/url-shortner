@@ -120,9 +120,7 @@ describe('LinkService', () => {
     it('should retry on short code collision during auto-generation', async () => {
       mockQueryRunner.manager.save
         .mockRejectedValueOnce({ code: '23505' })
-        .mockImplementationOnce((link: Partial<Link>) =>
-          Promise.resolve({ ...createMockLink(), ...link, id: 1 }),
-        );
+        .mockImplementationOnce((link: Partial<Link>) => Promise.resolve({ ...createMockLink(), ...link, id: 1 }));
 
       const dto = { originalUrl: 'https://example.com' };
       const result = await service.create(dto);
@@ -150,11 +148,10 @@ describe('LinkService', () => {
     });
 
     it('should use Redis cache on subsequent lookups', async () => {
-      redisService.get.mockResolvedValueOnce(createMockLink());
+      redisService.getOrSet.mockResolvedValueOnce(createMockLink());
       const result = await service.findByShortCode('abc123');
       expect(result).toBeDefined();
       expect(linkRepository.findOne).not.toHaveBeenCalled();
-      expect(redisService.getOrSet).not.toHaveBeenCalled();
     });
   });
 

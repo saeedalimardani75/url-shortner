@@ -25,7 +25,7 @@ export class AnalyticsProcessor {
     private readonly analyticsService: AnalyticsService,
   ) {}
 
-  @Process('record-click')
+  @Process({ name: 'record-click', concurrency: 5 })
   async processClick(job: Job<ClickJobData>): Promise<void> {
     const startTime = Date.now();
     const { linkId, ip, userAgent, referrer, timestamp } = job.data;

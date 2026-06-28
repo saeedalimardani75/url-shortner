@@ -43,25 +43,13 @@ export class LinkService {
 
     if (dto.customCode) {
       await this.validateCustomCode(dto.customCode);
-      return this.persistLink(
-        normalizedUrl,
-        dto.customCode,
-        dto.expiresAt,
-        logContext,
-        startTime,
-      );
+      return this.persistLink(normalizedUrl, dto.customCode, dto.expiresAt, logContext, startTime);
     }
 
     for (let attempt = 0; attempt < LINK_CONFIG.maxShortCodeRetries; attempt++) {
       const shortCode = nanoid(LINK_CONFIG.defaultShortCodeLength);
       try {
-        return await this.persistLink(
-          normalizedUrl,
-          shortCode,
-          dto.expiresAt,
-          logContext,
-          startTime,
-        );
+        return await this.persistLink(normalizedUrl, shortCode, dto.expiresAt, logContext, startTime);
       } catch (error) {
         if (this.isUniqueConstraintViolation(error)) {
           this.logger.debug({
@@ -168,23 +156,6 @@ export class LinkService {
     const startTime = Date.now();
     const logContext = { shortCode, requestId };
 
-    const cached = await this.getCachedLink(shortCode);
-    if (cached) {
-      this.logger.debug({
-        message: 'Cache hit for link',
-        ...logContext,
-        durationMs: Date.now() - startTime,
-        cacheHit: true,
-      });
-      return this.validateLink(cached);
-    }
-
-    this.logger.debug({
-      message: 'Cache miss for link, loading from database',
-      ...logContext,
-      cacheHit: false,
-    });
-
     const link = await this.redisService.getOrSet(
       RedisKeys.link(shortCode),
       () => this.getDatabaseLink(shortCode),
@@ -192,17 +163,12 @@ export class LinkService {
     );
 
     this.logger.debug({
-      message: 'Link loaded from database',
+      message: 'Resolved link',
       ...logContext,
       durationMs: Date.now() - startTime,
-      cacheHit: false,
     });
 
     return link;
-  }
-
-  private async getCachedLink(shortCode: string): Promise<Link | null> {
-    return this.redisService.get<Link>(RedisKeys.link(shortCode));
   }
 
   private async getDatabaseLink(shortCode: string): Promise<Link> {
@@ -221,16 +187,6 @@ export class LinkService {
       throw new GoneException('This short URL has expired');
     }
 
-    return link;
-  }
-
-  private validateLink(link: Link): Link {
-    if (!link.isActive) {
-      throw new GoneException('This short URL has been disabled');
-    }
-    if (link.expiresAt && new Date() > link.expiresAt) {
-      throw new GoneException('This short URL has expired');
-    }
     return link;
   }
 
@@ -292,42 +248,30 @@ export class LinkService {
       throw error;
     }
 
+    link.clickCount += LINK_CONFIG.clickCounterIncrement;
+
     try {
-      const updatedLink = await this.getDatabaseLink(shortCode);
-      await this.cacheLink(shortCode, updatedLink);
-
-      this.logger.log({
-        message: 'Resolved and tracked link',
-        ...logContext,
-        durationMs: Date.now() - startTime,
-        clickCount: updatedLink.clickCount,
-      });
-
-      return updatedLink;
+      await this.cacheLink(shortCode, link);
     } catch (error) {
       this.logger.warn({
         message: 'Failed to refresh link cache after click',
         ...logContext,
         error: error instanceof Error ? error.message : String(error),
       });
-
-      this.logger.log({
-        message: 'Resolved and tracked link',
-        ...logContext,
-        durationMs: Date.now() - startTime,
-        clickCount: link.clickCount + LINK_CONFIG.clickCounterIncrement,
-      });
-
-      return { ...link, clickCount: link.clickCount + LINK_CONFIG.clickCounterIncrement };
     }
+
+    this.logger.log({
+      message: 'Resolved and tracked link',
+      ...logContext,
+      durationMs: Date.now() - startTime,
+      clickCount: link.clickCount,
+    });
+
+    return link;
   }
 
   private async incrementClickCount(linkId: number): Promise<void> {
-    await this.linkRepository.increment(
-      { id: linkId },
-      'clickCount',
-      LINK_CONFIG.clickCounterIncrement,
-    );
+    await this.linkRepository.increment({ id: linkId }, 'clickCount', LINK_CONFIG.clickCounterIncrement);
   }
 
   async getStats(shortCode: string, requestId?: string) {

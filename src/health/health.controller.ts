@@ -1,7 +1,8 @@
-import { Controller, Get, Logger } from '@nestjs/common';
+import { Controller, Get, Logger, Res, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { Response } from 'express';
 import { RedisService } from '../redis/redis.service';
 import { QueuesService } from '../queues/queues.service';
 
@@ -18,7 +19,7 @@ export class HealthController {
 
   @Get()
   @ApiOperation({ summary: 'Check system health' })
-  async check(): Promise<{
+  async check(@Res({ passthrough: true }) res: Response): Promise<{
     status: string;
     timestamp: string;
     uptime: number;
@@ -49,6 +50,10 @@ export class HealthController {
     };
 
     const allUp = Object.values(checks).every((c) => c.status === 'up');
+
+    if (!allUp) {
+      res.status(HttpStatus.SERVICE_UNAVAILABLE);
+    }
 
     return {
       status: allUp ? 'healthy' : 'degraded',

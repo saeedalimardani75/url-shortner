@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUrl, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsUrl, IsDateString, MinLength, MaxLength, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateLinkDto {
@@ -8,10 +8,13 @@ export class CreateLinkDto {
 
   @ApiPropertyOptional({
     example: 'custom123',
-    description: 'Optional custom short code (generated if omitted)',
+    description: 'Optional custom short code (generated if omitted) - 3-32 alphanumeric characters',
   })
   @IsOptional()
   @IsString()
+  @MinLength(3)
+  @MaxLength(32)
+  @Matches(/^[a-zA-Z0-9_-]+$/, { message: 'customCode can only contain letters, numbers, hyphens, and underscores' })
   customCode?: string;
 
   @ApiPropertyOptional({

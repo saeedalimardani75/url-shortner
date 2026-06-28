@@ -6,6 +6,7 @@ import { QueuesService } from '../../queues/queues.service';
 
 describe('HealthController', () => {
   let controller: HealthController;
+  let mockResponse: any;
 
   const mockDataSource = {
     query: jest.fn().mockResolvedValue([{ 1: 1 }]),
@@ -20,6 +21,7 @@ describe('HealthController', () => {
   };
 
   beforeEach(async () => {
+    mockResponse = { status: jest.fn().mockReturnThis() };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HealthController],
       providers: [
@@ -39,7 +41,7 @@ describe('HealthController', () => {
 
   describe('check', () => {
     it('should return healthy when all services are up', async () => {
-      const result = await controller.check();
+      const result = await controller.check(mockResponse);
       expect(result.status).toBe('healthy');
       expect(result.checks.database.status).toBe('up');
       expect(result.checks.redis.status).toBe('up');
@@ -48,8 +50,9 @@ describe('HealthController', () => {
 
     it('should return degraded when a service is down', async () => {
       mockRedisService.ping.mockResolvedValueOnce(false);
-      const result = await controller.check();
+      const result = await controller.check(mockResponse);
       expect(result.status).toBe('degraded');
+      expect(mockResponse.status).toHaveBeenCalledWith(503);
       expect(result.checks.redis.status).toBe('down');
     });
   });

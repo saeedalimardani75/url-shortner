@@ -19,6 +19,9 @@ export default registerAs('app', () => ({
     password: process.env.REDIS_PASSWORD || '',
     db: parseInt(process.env.REDIS_DB || '0', 10),
   },
+  corsOrigin: process.env.CORS_ORIGIN || '*',
+  apiKeyPrefix: process.env.API_KEY_PREFIX || 'sk_live_',
+  gracefulShutdownTimeoutMs: parseInt(process.env.GRACEFUL_SHUTDOWN_TIMEOUT || '25000', 10),
   rateLimit: {
     ttl: parseInt(process.env.RATE_LIMIT_TTL || '60', 10),
     max: parseInt(process.env.RATE_LIMIT_MAX || '10', 10),

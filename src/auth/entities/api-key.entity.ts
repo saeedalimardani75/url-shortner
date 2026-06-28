@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 
 export enum ApiKeyRole {
   ADMIN = 'admin',
+  CUSTOMER = 'customer',
   READONLY = 'readonly',
   ANALYTICS = 'analytics',
 }
@@ -18,7 +19,7 @@ export class ApiKey {
   @Column({ unique: true })
   name: string;
 
-  @Column({ type: 'varchar', default: ApiKeyRole.ADMIN })
+  @Column({ type: 'varchar', default: ApiKeyRole.CUSTOMER })
   role: string;
 
   @Column({ default: true })

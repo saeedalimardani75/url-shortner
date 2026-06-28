@@ -26,9 +26,12 @@ services:
       - DB_NAME=${DB_NAME:-urlshortener}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - REDIS_DB=0
       - PORT=3000
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - API_KEY_PREFIX=${API_KEY_PREFIX:-sk_live_}
+      - GRACEFUL_SHUTDOWN_TIMEOUT=${GRACEFUL_SHUTDOWN_TIMEOUT:-25000}
       - RATE_LIMIT_TTL=${RATE_LIMIT_TTL:-60}
       - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-10}
     depends_on:

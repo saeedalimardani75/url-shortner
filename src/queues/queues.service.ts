@@ -20,7 +20,14 @@ export class QueuesService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    await this.scheduleCleanup();
+    try {
+      await this.scheduleCleanup();
+    } catch (error) {
+      this.logger.error({
+        message: 'Failed to schedule cleanup job during init',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   async addClickEvent(event: ClickEvent): Promise<void> {
@@ -41,6 +48,8 @@ export class QueuesService implements OnModuleInit {
         {},
         {
           repeat: { cron: '0 */6 * * *' },
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 1000 },
           removeOnComplete: true,
           removeOnFail: false,
         },

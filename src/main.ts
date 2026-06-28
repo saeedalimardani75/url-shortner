@@ -3,12 +3,12 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
+import * as client from 'prom-client';
 import { AppModule } from './app.module';
 import { RequestIdInterceptor } from './common/interceptors/request-id.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { RedisService } from './redis/redis.service';
-import { QueuesService } from './queues/queues.service';
-import * as client from 'prom-client';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -19,8 +19,9 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port', 3000);
-  const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
-  const baseUrl = configService.get<string>('app.baseUrl', `http://localhost:${port}`);
+  const shutdownTimeout = configService.get<number>('app.gracefulShutdownTimeoutMs', 25000);
+
+  app.use(helmet());
 
   app.setGlobalPrefix('api', { exclude: ['/:code', 'docs', 'health', 'metrics'] });
 
@@ -29,12 +30,19 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: { enableImplicitConversion: false },
     }),
   );
 
   app.useGlobalInterceptors(new RequestIdInterceptor(), new LoggingInterceptor());
 
-  app.enableCors();
+  const corsOrigin = configService.get<string>('app.corsOrigin', '*');
+  app.enableCors({
+    origin: corsOrigin === '*' ? '*' : corsOrigin.split(',').map((o) => o.trim()),
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'x-api-key', 'x-request-id'],
+    credentials: true,
+  });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('URL Shortener API')
@@ -56,9 +64,6 @@ async function bootstrap() {
   const redisService = app.get(RedisService);
   await redisService.onModuleInit();
 
-  const queuesService = app.get(QueuesService);
-  await queuesService.scheduleCleanup();
-
   await app.listen(port);
   pinoLogger.log(`URL Shortener API running on http://localhost:${port}`);
   pinoLogger.log(`Swagger docs at http://localhost:${port}/docs`);
@@ -69,21 +74,21 @@ async function bootstrap() {
   for (const signal of signals) {
     process.on(signal, async () => {
       logger.log(`Received ${signal}, starting graceful shutdown...`);
-      setTimeout(() => {
+
+      const forceExit = setTimeout(() => {
         logger.error('Forced shutdown after timeout');
         process.exit(1);
-      }, 25000).unref();
+      }, shutdownTimeout);
+      forceExit.unref();
 
       try {
-        await app.close();
-        logger.log('HTTP server closed');
-        await redisService.onModuleDestroy();
-        logger.log('Redis connections closed');
+        await Promise.allSettled([app.close(), redisService.onModuleDestroy()]);
+        logger.log('HTTP server and Redis connections closed');
         client.register.clear();
         logger.log('Metrics cleared');
         process.exit(0);
       } catch (err) {
-        logger.error(`Error during shutdown: ${err.message}`);
+        logger.error(`Error during shutdown: ${err instanceof Error ? err.message : String(err)}`);
         process.exit(1);
       }
     });

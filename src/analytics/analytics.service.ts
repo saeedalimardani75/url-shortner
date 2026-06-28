@@ -31,7 +31,7 @@ export class AnalyticsService {
     return this.clickRepository.count({ where: { linkId } });
   }
 
-  async getClicksGroupedByDate(linkId: number): Promise<{ date: string; count: string }[]> {
+  async getClicksGroupedByDate(linkId: number): Promise<{ date: string; count: number }[]> {
     const rows = await this.clickRepository
       .createQueryBuilder('click')
       .select('DATE(click.clickedAt)', 'date')
@@ -41,7 +41,7 @@ export class AnalyticsService {
       .orderBy('DATE(click.clickedAt)', 'DESC')
       .getRawMany<{ date: string; count: string }>();
 
-    return rows;
+    return rows.map((row) => ({ date: row.date, count: parseInt(row.count, 10) }));
   }
 
   /**
@@ -130,14 +130,8 @@ export class AnalyticsService {
     }
   }
 
-  private createFilteredQueryBuilder(
-    linkId: number,
-    startDate?: string,
-    endDate?: string,
-  ): SelectQueryBuilder<Click> {
-    const queryBuilder = this.clickRepository
-      .createQueryBuilder('click')
-      .where('click.linkId = :linkId', { linkId });
+  private createFilteredQueryBuilder(linkId: number, startDate?: string, endDate?: string): SelectQueryBuilder<Click> {
+    const queryBuilder = this.clickRepository.createQueryBuilder('click').where('click.linkId = :linkId', { linkId });
 
     if (startDate && endDate) {
       queryBuilder.andWhere('click.clickedAt BETWEEN :startDate AND :endDate', {
@@ -161,45 +155,35 @@ export class AnalyticsService {
 
     const queryBuilder = this.createFilteredQueryBuilder(linkId, startDate, endDate);
 
-    const [
-      totalClicks,
-      uniqueVisitors,
-      clicksByDate,
-      clicksByHour,
-      topCountries,
-      topBrowsers,
-      topOs,
-      topReferrers,
-    ] = await Promise.all([
-      this.clickRepository.count({ where: whereClause }),
-      queryBuilder
-        .clone()
-        .select('COUNT(DISTINCT click.ip)', 'count')
-        .getRawOne()
-        .then((row) => parseInt(row?.count || '0', 10)),
-      queryBuilder
-        .clone()
-        .select('DATE(click.clickedAt)', 'date')
-        .addSelect('COUNT(*)', 'count')
-        .groupBy('DATE(click.clickedAt)')
-        .orderBy('DATE(click.clickedAt)', 'DESC')
-        .getRawMany()
-        .then((rows) => rows.map((row) => ({ date: row.date, count: parseInt(row.count, 10) }))),
-      queryBuilder
-        .clone()
-        .select('EXTRACT(HOUR FROM click.clickedAt)', 'hour')
-        .addSelect('COUNT(*)', 'count')
-        .groupBy('EXTRACT(HOUR FROM click.clickedAt)')
-        .orderBy('hour', 'ASC')
-        .getRawMany()
-        .then((rows) =>
-          rows.map((row) => ({ hour: parseInt(row.hour, 10), count: parseInt(row.count, 10) })),
-        ),
-      this.fetchTopDimension(queryBuilder, 'country'),
-      this.fetchTopDimension(queryBuilder, 'browser'),
-      this.fetchTopDimension(queryBuilder, 'os'),
-      this.fetchTopDimension(queryBuilder, 'referrer'),
-    ]);
+    const [totalClicks, uniqueVisitors, clicksByDate, clicksByHour, topCountries, topBrowsers, topOs, topReferrers] =
+      await Promise.all([
+        this.clickRepository.count({ where: whereClause }),
+        queryBuilder
+          .clone()
+          .select('COUNT(DISTINCT click.ip)', 'count')
+          .getRawOne()
+          .then((row) => parseInt(row?.count || '0', 10)),
+        queryBuilder
+          .clone()
+          .select('DATE(click.clickedAt)', 'date')
+          .addSelect('COUNT(*)', 'count')
+          .groupBy('DATE(click.clickedAt)')
+          .orderBy('DATE(click.clickedAt)', 'DESC')
+          .getRawMany()
+          .then((rows) => rows.map((row) => ({ date: row.date, count: parseInt(row.count, 10) }))),
+        queryBuilder
+          .clone()
+          .select('EXTRACT(HOUR FROM click.clickedAt)', 'hour')
+          .addSelect('COUNT(*)', 'count')
+          .groupBy('EXTRACT(HOUR FROM click.clickedAt)')
+          .orderBy('hour', 'ASC')
+          .getRawMany()
+          .then((rows) => rows.map((row) => ({ hour: parseInt(row.hour, 10), count: parseInt(row.count, 10) }))),
+        this.fetchTopDimension(queryBuilder, 'country'),
+        this.fetchTopDimension(queryBuilder, 'browser'),
+        this.fetchTopDimension(queryBuilder, 'os'),
+        this.fetchTopDimension(queryBuilder, 'referrer'),
+      ]);
 
     return {
       totalClicks,

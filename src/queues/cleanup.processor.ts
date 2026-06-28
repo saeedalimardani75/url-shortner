@@ -16,7 +16,7 @@ export class CleanupProcessor {
     private readonly redisService: RedisService,
   ) {}
 
-  @Process('cleanup-expired')
+  @Process({ name: 'cleanup-expired', concurrency: 2 })
   async cleanupExpiredLinks(_job: Job): Promise<void> {
     const expiredLinks = await this.linkRepository.find({
       where: {
@@ -24,16 +24,35 @@ export class CleanupProcessor {
         isActive: true,
         deletedAt: IsNull(),
       },
+      take: 1000,
     });
 
+    let deactivated = 0;
+    let failed = 0;
+
     for (const link of expiredLinks) {
-      link.isActive = false;
-      await this.linkRepository.save(link);
-      await this.redisService.del(`link:${link.shortCode}`);
-      this.logger.log(`Deactivated expired link: ${link.shortCode}`);
+      try {
+        await this.linkRepository.update(link.id, { isActive: false });
+        await this.redisService.del(`link:${link.shortCode}`);
+        this.logger.log(`Deactivated expired link: ${link.shortCode}`);
+        deactivated++;
+      } catch (error) {
+        this.logger.error({
+          message: 'Failed to deactivate expired link',
+          shortCode: link.shortCode,
+          linkId: link.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        failed++;
+      }
     }
 
-    this.logger.log(`Cleanup complete: ${expiredLinks.length} links deactivated`);
+    this.logger.log({
+      message: 'Cleanup complete',
+      total: expiredLinks.length,
+      deactivated,
+      failed,
+    });
   }
 
   @OnQueueCompleted()

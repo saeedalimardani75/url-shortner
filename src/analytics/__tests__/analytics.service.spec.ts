@@ -90,6 +90,7 @@ describe('AnalyticsService', () => {
       const result = await service.getClicksGroupedByDate(1);
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('date');
+      expect(result[0].count).toBe(5);
     });
   });
 
@@ -141,15 +142,11 @@ describe('AnalyticsService', () => {
 
     it('should reject partial date ranges', async () => {
       await expect(service.getAggregatedAnalytics(1, '2026-01-01')).rejects.toThrow(BadRequestException);
-      await expect(service.getAggregatedAnalytics(1, undefined, '2026-12-31')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.getAggregatedAnalytics(1, undefined, '2026-12-31')).rejects.toThrow(BadRequestException);
     });
 
     it('should reject inverted date ranges', async () => {
-      await expect(
-        service.getAggregatedAnalytics(1, '2026-12-31', '2026-01-01'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.getAggregatedAnalytics(1, '2026-12-31', '2026-01-01')).rejects.toThrow(BadRequestException);
     });
   });
 

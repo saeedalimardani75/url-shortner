@@ -3,6 +3,11 @@ import { Link } from '../../link/entities/link.entity';
 
 @Entity('clicks')
 @Index(['linkId', 'clickedAt'])
+@Index(['linkId', 'ip'])
+@Index(['linkId', 'country'])
+@Index(['linkId', 'browser'])
+@Index(['linkId', 'os'])
+@Index(['linkId', 'referrer'])
 export class Click {
   @PrimaryGeneratedColumn()
   id: number;
@@ -16,22 +21,25 @@ export class Click {
   link: Link;
 
   @Column({ nullable: true, length: 64 })
+  @Index()
   ip: string;
 
   @Column({ nullable: true })
-  @Index()
   userAgent: string;
 
   @Column({ nullable: true })
   referrer: string;
 
   @Column({ nullable: true })
+  @Index()
   country: string;
 
   @Column({ nullable: true })
+  @Index()
   browser: string;
 
   @Column({ nullable: true })
+  @Index()
   os: string;
 
   @CreateDateColumn()

@@ -39,8 +39,8 @@ export class LinkStatsDto {
   @ApiProperty({ example: 42 })
   totalClicks: number;
 
-  @ApiProperty({ example: [{ date: '2026-06-27', count: '10' }] })
-  clicksByDate: { date: string; count: string }[];
+  @ApiProperty({ example: [{ date: '2026-06-27', count: 10 }] })
+  clicksByDate: { date: string; count: number }[];
 }
 
 export class PaginatedLinksDto {

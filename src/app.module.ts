@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+import { BootstrapSeeder } from './common/seeders/bootstrap.seeder';
 import configuration from './config/configuration';
 import { validationSchema } from './config/joi.config';
 import { RedisModule } from './redis/redis.module';
@@ -13,6 +14,7 @@ import { LinkModule } from './link/link.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { AdminModule } from './admin/admin.module';
+import { ThrottleGuard } from './common/guards/throttle.guard';
 import { Link } from './link/entities/link.entity';
 import { Click } from './analytics/entities/click.entity';
 import { ApiKey } from './auth/entities/api-key.entity';
@@ -54,12 +56,18 @@ import { ApiKey } from './auth/entities/api-key.entity';
     AnalyticsModule,
     AuthModule,
     AdminModule,
+    TypeOrmModule.forFeature([ApiKey]),
   ],
   providers: [
     {
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
     },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottleGuard,
+    },
+    BootstrapSeeder,
   ],
 })
 export class AppModule {}

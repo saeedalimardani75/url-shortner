@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ExecutionContext } from '@nestjs/common/interfaces';
 import { Reflector } from '@nestjs/core';
 import { RolesGuard } from '../guards/roles.guard';
@@ -60,7 +60,7 @@ describe('RolesGuard', () => {
     reflector.getAllAndOverride.mockReturnValue(['admin']);
     const context = createContext(undefined);
 
-    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
   });
 
   it('should reject when role does not match', () => {

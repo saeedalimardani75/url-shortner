@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AuthService } from '../auth.service';
@@ -42,8 +43,16 @@ describe('AuthService', () => {
     save: jest.fn().mockResolvedValue(mockApiKey),
     findOne: jest.fn().mockResolvedValue(null),
     find: jest.fn().mockResolvedValue([mockApiKey]),
+    findAndCount: jest.fn().mockResolvedValue([[mockApiKey], 1]),
     delete: jest.fn().mockResolvedValue({ affected: 1 }),
     update: jest.fn().mockResolvedValue({ affected: 1 }),
+  };
+
+  const mockConfigService = {
+    get: jest.fn().mockImplementation((key: string, defaultValue?: unknown) => {
+      if (key === 'app.apiKeyPrefix') return 'sk_live_';
+      return defaultValue;
+    }),
   };
 
   beforeEach(async () => {
@@ -52,6 +61,7 @@ describe('AuthService', () => {
         AuthService,
         { provide: getRepositoryToken(ApiKey), useValue: mockRepository },
         { provide: RedisService, useValue: mockRedis },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -97,6 +107,16 @@ describe('AuthService', () => {
       };
       await expect(service.createApiKey(dto)).rejects.toThrow(BadRequestException);
     });
+
+    it('should reject expiration dates more than 10 years in the future', async () => {
+      const futureDate = new Date();
+      futureDate.setFullYear(futureDate.getFullYear() + 11);
+      const dto = {
+        name: 'new-key',
+        expiresAt: futureDate.toISOString(),
+      };
+      await expect(service.createApiKey(dto)).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('validateApiKey', () => {
@@ -110,6 +130,18 @@ describe('AuthService', () => {
 
     it('should return null for invalid key format', async () => {
       const result = await service.validateApiKey('invalid-key');
+      expect(result).toBeNull();
+      expect(apiKeyRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should return null for key with wrong hex length', async () => {
+      const result = await service.validateApiKey('sk_live_abc123');
+      expect(result).toBeNull();
+      expect(apiKeyRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should return null for key with invalid hex characters', async () => {
+      const result = await service.validateApiKey('sk_live_' + 'g'.repeat(48));
       expect(result).toBeNull();
       expect(apiKeyRepository.findOne).not.toHaveBeenCalled();
     });
@@ -177,17 +209,17 @@ describe('AuthService', () => {
   describe('updateKeyExpiration', () => {
     it('should reject invalid expiration dates', async () => {
       mockRepository.findOne.mockResolvedValueOnce(mockApiKey);
-      await expect(
-        service.updateKeyExpiration(1, '2020-01-01T00:00:00.000Z'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.updateKeyExpiration(1, '2020-01-01T00:00:00.000Z')).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('findAll', () => {
-    it('should return all API keys without keyHash', async () => {
-      mockRepository.find.mockResolvedValueOnce([mockApiKey]);
+    it('should return paginated API keys without keyHash', async () => {
+      mockRepository.findAndCount.mockResolvedValueOnce([[mockApiKey], 1]);
       const result = await service.findAll();
-      expect(result).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(1);
+      expect(result.page).toBe(1);
     });
   });
 

@@ -1,4 +1,11 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { Request } from 'express';
@@ -23,7 +30,11 @@ export class RolesGuard implements CanActivate {
     const apiKey = request.apiKey;
 
     if (!apiKey) {
-      throw new ForbiddenException('No API key found in request');
+      this.logger.warn({
+        message: 'Roles guard: No API key found in request',
+        requestId: request.requestId,
+      });
+      throw new UnauthorizedException('Authentication required');
     }
 
     const hasRole = requiredRoles.includes(apiKey.role);

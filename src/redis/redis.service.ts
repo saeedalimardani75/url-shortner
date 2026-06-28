@@ -71,10 +71,14 @@ export class RedisService implements OnModuleDestroy {
 
   async delPattern(pattern: string): Promise<void> {
     try {
-      const keys = await this.redis.keys(pattern);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-      }
+      let cursor = '0';
+      do {
+        const [nextCursor, keys] = await this.redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        if (keys.length > 0) {
+          await this.redis.del(...keys);
+        }
+      } while (cursor !== '0');
     } catch {
       this.logger.error('Redis delPattern error');
     }
@@ -113,11 +117,7 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
-  async getOrSet<T>(
-    key: string,
-    factory: () => Promise<T>,
-    ttlSeconds = 300,
-  ): Promise<T> {
+  async getOrSet<T>(key: string, factory: () => Promise<T>, ttlSeconds = 300): Promise<T> {
     const cached = await this.get<T>(key);
     if (cached !== null) {
       return cached;
@@ -143,11 +143,7 @@ export class RedisService implements OnModuleDestroy {
     return factory();
   }
 
-  private async waitForCache<T>(
-    key: string,
-    intervalMs: number,
-    maxAttempts: number,
-  ): Promise<T | null> {
+  private async waitForCache<T>(key: string, intervalMs: number, maxAttempts: number): Promise<T | null> {
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
       const value = await this.get<T>(key);

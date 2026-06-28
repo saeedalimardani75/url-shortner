@@ -10,7 +10,7 @@ export class Link {
   @Index()
   shortCode: string;
 
-  @Column()
+  @Column({ type: 'text' })
   originalUrl: string;
 
   @Column({ nullable: true })

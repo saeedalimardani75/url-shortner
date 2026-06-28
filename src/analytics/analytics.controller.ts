@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  UseGuards,
-  ParseIntPipe,
-  Req,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, ParseIntPipe, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AnalyticsService } from './analytics.service';
@@ -22,7 +14,7 @@ export class AnalyticsController {
 
   @Get(':linkId')
   @UseGuards(ApiKeyGuard, RolesGuard)
-  @Roles('admin', 'analytics')
+  @Roles('admin', 'customer', 'analytics')
   @ApiBearerAuth('x-api-key')
   @ApiOperation({ summary: 'Get aggregated analytics for a link' })
   @ApiQuery({ name: 'startDate', required: false, example: '2026-01-01' })
@@ -33,11 +25,6 @@ export class AnalyticsController {
     @Query('endDate') endDate?: string,
     @Req() req?: Request,
   ): Promise<AggregatedAnalyticsDto> {
-    return this.analyticsService.getAggregatedAnalytics(
-      linkId,
-      startDate,
-      endDate,
-      req?.['requestId'],
-    );
+    return this.analyticsService.getAggregatedAnalytics(linkId, startDate, endDate, req?.['requestId']);
   }
 }

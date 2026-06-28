@@ -151,7 +151,7 @@ Client                        NestJS                       Redis                
 - **Key Hashing** — Keys are hashed with SHA-256 before storage; plain key shown only once
 - **Key Rotation** — Rotate keys without downtime
 - **Expiration & Status** — Keys can expire and be activated/deactivated
-- **Role-Based Access** — Three roles: `admin`, `readonly`, `analytics`
+- **Role-Based Access** — Four roles: `admin`, `customer`, `readonly`, `analytics`
 
 ### Analytics
 - **Async Click Tracking** — Clicks are recorded asynchronously via BullMQ, not blocking redirects
@@ -180,21 +180,22 @@ Client                        NestJS                       Redis                
 
 ## Tech Stack
 
-| Component       | Technology                                     |
-|----------------|------------------------------------------------|
-| Framework       | NestJS 10 (Node.js 20)                        |
-| Language        | TypeScript 5                                  |
-| Database        | PostgreSQL 16                                 |
-| ORM             | TypeORM 0.3                                   |
-| Cache           | Redis 7 (via ioredis)                         |
-| Queue           | BullMQ / @nestjs/bull                         |
-| Validation      | Joi (env), class-validator (DTOs)             |
-| Logging         | Pino (via nestjs-pino)                        |
-| API Docs        | Swagger / OpenAPI                             |
-| Metrics         | prom-client                                   |
-| Testing         | Jest (unit + integration + e2e)               |
-| CI/CD           | GitHub Actions                                |
-| Container       | Docker & Docker Compose                       |
+| Component          | Technology                                     |
+|--------------------|------------------------------------------------|
+| Framework          | NestJS 10 (Node.js 20)                        |
+| Language           | TypeScript 5                                  |
+| Database           | PostgreSQL 16                                 |
+| ORM                | TypeORM 0.3                                   |
+| Cache              | Redis 7 (via ioredis)                         |
+| Queue              | BullMQ / @nestjs/bull                         |
+| Validation         | Joi (env), class-validator (DTOs)             |
+| Logging            | Pino (via nestjs-pino)                        |
+| Security           | Helmet, SHA-256 hashing, Rate Limiting        |
+| API Docs           | Swagger / OpenAPI                             |
+| Metrics            | prom-client                                   |
+| Testing            | Jest (127 tests, 16 suites)                   |
+| CI/CD              | GitHub Actions (lint → test → build)          |
+| Container          | Docker & Docker Compose (multi-stage build)   |
 
 ---
 
@@ -217,10 +218,11 @@ npm install
 
 ### Environment variables
 
-Copy the existing `.env` file or create a new one:
+Copy the example file:
 
 ```bash
-cp .env .env.local
+cp .env.example .env
+# Then edit .env with your values
 ```
 
 See [Configuration](#configuration) for all variables.
@@ -243,18 +245,30 @@ docker compose up db redis -d
 npm run start:dev
 ```
 
-### Create first admin API key
+### First admin API key (auto-seeded)
 
-The app starts with no API keys. Create one via a direct database insert or by temporarily disabling the guard. For development, seed an initial key:
+On first startup with an empty database, the app **automatically creates a bootstrap admin API key** and prints it to the logs:
 
-```bash
-# Or use the Swagger UI at http://localhost:3000/docs
-curl -X POST http://localhost:3000/api/admin/api-keys \
-  -H 'Content-Type: application/json' \
-  -d '{"name": "admin-key", "role": "admin"}'
+```
+[Nest] WARN BootstrapSeeder - ═══════════════════════════════════════════════════════════
+[Nest] WARN BootstrapSeeder -   No API keys found — created bootstrap admin key
+[Nest] WARN BootstrapSeeder -   SAVE THIS KEY — it will NOT be shown again:
+[Nest] WARN BootstrapSeeder -   sk_live_8f3a2b1c9d0e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f
+[Nest] WARN BootstrapSeeder -   Use it in the x-api-key header for admin endpoints.
+[Nest] WARN BootstrapSeeder -   You can create additional keys via POST /api/admin/api-keys
+[Nest] WARN BootstrapSeeder - ═══════════════════════════════════════════════════════════
 ```
 
-> **Note**: The admin endpoints require an API key in the `x-api-key` header. In development, you can disable the guard temporarily or use the test setup.
+Copy this key — it is shown **only once**. Subsequent restarts will not regenerate it.
+
+Use it to access all admin endpoints and create additional keys via the Swagger UI or curl:
+
+```bash
+curl -X POST http://localhost:3000/api/admin/api-keys \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: sk_live_8f3a2b1c9d0e...' \
+  -d '{"name": "marketing-dashboard", "role": "analytics"}'
+```
 
 ### Access the API
 
@@ -266,24 +280,29 @@ curl -X POST http://localhost:3000/api/admin/api-keys \
 
 ## Configuration
 
-All environment variables are validated with **Joi** at startup.
+All environment variables are validated with **Joi** at startup; invalid config fails fast.
 
-| Variable           | Default        | Description                          |
-|--------------------|----------------|--------------------------------------|
-| `PORT`             | `3000`         | HTTP server port                     |
-| `NODE_ENV`         | `development`  | Environment (`development`, `production`, `test`) |
-| `LOG_LEVEL`        | `info`         | Pino log level                       |
-| `DB_HOST`          | `localhost`    | PostgreSQL host                      |
-| `DB_PORT`          | `5432`         | PostgreSQL port                      |
-| `DB_USERNAME`      | `postgres`     | PostgreSQL username                  |
-| `DB_PASSWORD`      | `postgres`     | PostgreSQL password                  |
-| `DB_NAME`          | `urlshortener` | PostgreSQL database name             |
-| `REDIS_HOST`       | `localhost`    | Redis host                           |
-| `REDIS_PORT`       | `6379`         | Redis port                           |
-| `REDIS_PASSWORD`   | (empty)        | Redis password                       |
-| `REDIS_DB`         | `0`            | Redis database index                 |
-| `RATE_LIMIT_TTL`   | `60`           | Rate limit window (seconds)          |
-| `RATE_LIMIT_MAX`   | `10`           | Max requests per window              |
+| Variable                     | Default        | Description                          |
+|------------------------------|----------------|--------------------------------------|
+| `PORT`                       | `3000`         | HTTP server port                     |
+| `NODE_ENV`                   | `development`  | Environment (`development`, `production`, `test`) |
+| `LOG_LEVEL`                  | `info`         | Pino log level (`trace`-`fatal`)     |
+| `BASE_URL`                   | `http://localhost:3000` | Public base URL for short links |
+| `REDIRECT_STATUS`            | `301`          | HTTP redirect status (`301`, `302`, `307`, `308`) |
+| `DB_HOST`                    | `localhost`    | PostgreSQL host                      |
+| `DB_PORT`                    | `5432`         | PostgreSQL port                      |
+| `DB_USERNAME`                | `postgres`     | PostgreSQL username                  |
+| `DB_PASSWORD`                | (required)     | PostgreSQL password                  |
+| `DB_NAME`                    | `urlshortener` | PostgreSQL database name             |
+| `REDIS_HOST`                 | `localhost`    | Redis host                           |
+| `REDIS_PORT`                 | `6379`         | Redis port                           |
+| `REDIS_PASSWORD`             | (empty)        | Redis password (min 8 chars in production) |
+| `REDIS_DB`                   | `0`            | Redis database index                 |
+| `API_KEY_PREFIX`             | `sk_live_`     | Prefix for generated API keys        |
+| `CORS_ORIGIN`                | `*`            | Allowed CORS origins (comma-separated) |
+| `GRACEFUL_SHUTDOWN_TIMEOUT`  | `25000`        | Max shutdown wait time (ms)          |
+| `RATE_LIMIT_TTL`             | `60`           | Rate limit window (seconds)          |
+| `RATE_LIMIT_MAX`             | `10`           | Max requests per window              |
 
 ---
 
@@ -350,6 +369,9 @@ Response:
 ```
 
 ### Admin Endpoints (require `x-api-key` header)
+
+> **Roles:** Link endpoints (`GET/POST/DELETE/PUT /api/admin/links*`) accept `admin` or `customer`.  
+> **Roles:** API key endpoints (`*/api/admin/api-keys*`) accept **`admin` only**.
 
 #### `GET /api/admin/links` — List all links (paginated)
 
@@ -503,8 +525,8 @@ Recording a click involves parsing user-agent, geo-IP lookup, and a database wri
 ### Why SHA-256 for API keys?
 Storing plain-text API keys is a security risk. SHA-256 hashing ensures that even if the database is compromised, keys cannot be recovered. The plain key is shown only once at creation time.
 
-### Why in-memory rate limiting (not Redis)?
-For a single-instance deployment, in-memory rate limiting is simpler and faster. For multi-instance deployments, this should be replaced with a Redis-backed rate limiter.
+### Why Redis-backed rate limiting with in-memory fallback?
+Rate limiting uses Redis for distributed counting, which works across multiple instances. If Redis is unavailable, it falls back to an in-memory Map with periodic eviction to prevent memory leaks — ensuring the service remains available even during a cache outage.
 
 ### Why soft delete instead of hard delete?
 Soft delete allows recovery and maintains referential integrity with analytics data. Hard delete is available as an explicit admin action.
@@ -516,24 +538,38 @@ Pino is significantly faster (2-3x) and produces structured JSON output that int
 
 ## Security Considerations
 
+- **Helmet middleware** — HTTP security headers (CSP, HSTS, X-Frame-Options, etc.) applied globally.
 - **API keys are SHA-256 hashed** before storage. The plain key is returned only at creation.
-- **Rate limiting** protects public endpoints from abuse.
+- **Rate limiting** protects public endpoints from abuse, with Redis-backed implementation and automatic in-memory fallback.
 - **Input validation** — All DTOs use `class-validator` with whitelist mode; unknown properties are rejected.
 - **Environment validation** — Joi validates all env vars at startup; misconfiguration fails fast.
 - **Request IDs** enable tracing across logs for security auditing.
-- **Role-based access** — Three roles limit what API keys can do (`admin`, `readonly`, `analytics`).
+- **Role-based access** — Four roles limit what API keys can do:
+
+  | Role | Manage links | View analytics | Create/manage API keys |
+  |------|:-----------:|:-------------:|:--------------------:|
+  | `admin` | ✅ | ✅ | ✅ |
+  | `customer` | ✅ | ✅ | ❌ |
+  | `analytics` | ❌ | ✅ | ❌ |
+  | `readonly` | ❌ | ❌ | ❌ |
 - **Key rotation** — Compromised keys can be rotated without creating new ones.
 - **CORS** is enabled but should be restricted to known origins in production.
 
 ### Production Checklist
 
-- [ ] Set `NODE_ENV=production`
-- [ ] Disable TypeORM `synchronize` (it's auto-disabled in production)
-- [ ] Use strong `DB_PASSWORD` and `REDIS_PASSWORD`
-- [ ] Restrict CORS origins
-- [ ] Configure HTTPS termination (reverse proxy)
+- [x] `NODE_ENV=production` disables TypeORM `synchronize` and Pino pretty-print
+- [x] Helmet security headers enabled
+- [x] Global validation pipe with whitelist + forbidNonWhitelisted
+- [x] Structured JSON logging via Pino with request IDs
+- [x] Graceful shutdown with configurable timeout
+- [x] Docker health checks for all services
+- [x] Composite indexes for analytics query performance
+- [x] Bootstrap seeder creates first admin API key on empty database
+- [ ] Use strong `DB_PASSWORD` and `REDIS_PASSWORD` in production
+- [ ] Restrict CORS origins to known domains
+- [ ] Configure HTTPS termination (reverse proxy / load balancer)
 - [ ] Set up log aggregation (ELK, Datadog, etc.)
-- [ ] Replace in-memory rate limiting with Redis-backed
+- [ ] Replace in-memory rate limiting fallback with Redis-backed
 - [ ] Add geo-IP resolution for click analytics
 - [ ] Run database migrations explicitly (not sync)
 
@@ -564,19 +600,26 @@ npm run test:cov
 npm run test:e2e
 ```
 
-The test suite covers:
+The test suite covers **127 tests** across **16 test suites**:
 
-| Module       | Tests | Key Coverage                              |
-|-------------|-------|------------------------------------------|
-| LinkService  | 15    | CRUD, caching, soft delete, restore, pagination |
-| AuthService  | 12    | Creation, validation, hashing, rotation, caching |
-| AnalyticsService | 4  | Aggregation, caching, grouped queries     |
-| HealthController | 2  | Health check logic                       |
-| ExceptionFilter | 3  | Error format consistency                 |
-| ThrottleGuard | 3   | Rate limiting                            |
-| RequestIdInterceptor | 2 | Request ID generation and propagation |
-| QueuesService | 4    | Job scheduling, ping                     |
-| RedisService | 3     | Graceful degradation                     |
+| Module               | Tests | Key Coverage                                      |
+|----------------------|-------|---------------------------------------------------|
+| LinkService          | 15    | CRUD, caching, soft delete, restore, pagination   |
+| LinkController       | 3     | Create, redirect, stats endpoints                 |
+| AuthService          | 12    | Creation, validation, hashing, rotation, caching  |
+| ApiKeyGuard          | 5     | Auth header extraction, validation                |
+| RolesGuard           | 4     | Role checking, missing key, insufficient role     |
+| AnalyticsService     | 4     | Aggregation, caching, grouped queries             |
+| AnalyticsController  | 2     | Aggregated analytics endpoint                     |
+| AdminController      | 11    | All admin CRUD endpoints                          |
+| HealthController     | 2     | Health check logic                                |
+| ExceptionFilter      | 3     | Error format consistency                          |
+| ThrottleGuard        | 4     | Rate limiting, Redis fallback                     |
+| RequestIdInterceptor | 2     | Request ID generation and propagation             |
+| QueuesService        | 4     | Job scheduling, ping                              |
+| RedisService         | 15    | get/set/del, delPattern, locks, getOrSet, ping    |
+| AnalyticsProcessor   | 3     | Click recording, string truncation                |
+| CleanupProcessor     | 3     | Expired link deactivation, error handling         |
 
 ---
 
@@ -595,7 +638,8 @@ url-shortener/
 │   │   ├── filters/              # Exception filters
 │   │   ├── guards/               # Throttle guard
 │   │   ├── interceptors/         # Request ID + logging
-│   │   └── decorators/           # Rate limit decorator
+│   │   ├── decorators/           # Rate limit decorator
+│   │   └── seeders/              # Bootstrap seeders
 │   ├── redis/                    # Redis module (global)
 │   ├── queues/                   # BullMQ queues + processors
 │   ├── health/                   # Health check endpoint
